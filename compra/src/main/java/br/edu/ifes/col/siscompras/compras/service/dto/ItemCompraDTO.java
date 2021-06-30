@@ -14,4 +14,6 @@ public class ItemCompraDTO implements Serializable {
     private Integer quantidade;
 
     private Float valorUnitario;
+
+    private Integer compraId;
 }

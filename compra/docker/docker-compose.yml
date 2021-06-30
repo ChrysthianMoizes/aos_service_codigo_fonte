@@ -1,0 +1,7 @@
+version: '2'
+services:
+  compras-postgresql:
+    extends:
+      file: postgresql.yml
+      service: postgresql
+    container_name: compras-postgresql

@@ -1,9 +1,13 @@
 package br.edu.ifes.col.siscompras.compras.service;
 
+import br.edu.ifes.col.siscompras.compras.domain.Compra;
+import br.edu.ifes.col.siscompras.compras.repository.CompraRepository;
+import br.edu.ifes.col.siscompras.compras.service.dto.CompraDTO;
 import br.edu.ifes.col.siscompras.compras.service.dto.ItemCompraDTO;
 import br.edu.ifes.col.siscompras.compras.service.exception.RegraNegocioException;
 import br.edu.ifes.col.siscompras.compras.service.feign.EstoqueService;
 import br.edu.ifes.col.siscompras.compras.service.feign.PagamentoService;
+import br.edu.ifes.col.siscompras.compras.service.mapper.CompraMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,21 +24,23 @@ public class CompraService {
 
     private final EstoqueService estoqueService;
 
-    public void comprar(List<ItemCompraDTO> itens) {
+    private final CompraMapper compraMapper;
 
-        log.info("SISTEMA COMPRAS: Iniciando processo de compra...");
+    private final CompraRepository compraRepository;
 
-        Float total = itens.stream().reduce(0f, (subtotal, item) -> subtotal + (item.getQuantidade() * item.getValorUnitario()), Float::sum);
+    public List<CompraDTO> listar() {
+        List<Compra> compras = compraRepository.findAll();
+        return compraMapper.toDto(compras);
+    }
+
+    public CompraDTO comprar(CompraDTO compraDTO) {
+
+        Float total = compraDTO.getItens().stream().reduce(0f, (subtotal, item) -> subtotal + (item.getQuantidade() * item.getValorUnitario()), Float::sum);
         String cartao = "123.456.789.000";
 
         reservarPagamento(cartao, total);
 
-        log.info("SISTEMA COMPRAS: Saldo reservado..");
-
-        decrementarEstoque(itens);
-
-        log.info("SISTEMA COMPRAS: Estoque decrementado...");
-        log.info("SISTEMA COMPRAS: Finalizando processo de compra...");
+        decrementarEstoque(compraDTO.getItens());
 
         Random gerador = new Random();
         int val = gerador.nextInt(3);
@@ -42,11 +48,22 @@ public class CompraService {
         if(val == 0) {
             log.error("SISTEMA COMPRAS: Erro ao finalizar processamento de compra...");
             reverterPagamento(cartao, total);
-            reverterEstoque(itens);
+            reverterEstoque(compraDTO.getItens());
             throw new RegraNegocioException("Erro ao finalizar compra");
         }
 
+        Compra compra = compraMapper.toEntity(compraDTO);
+        compraRepository.save(compra);
+
+        despachar(compra);
+
         log.info("SISTEMA COMPRAS: Processamento de compra finalizado com sucesso...");
+
+        return compraMapper.toDto(compra);
+    }
+
+    private void despachar(Compra compra) {
+        System.out.println(compra.toString());
     }
 
     private void reservarPagamento(String cartao, Float total) {
