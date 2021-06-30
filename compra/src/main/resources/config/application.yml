@@ -33,3 +33,9 @@ application:
   feign:
     pagamento: http://localhost:8082
     estoque: http://localhost:8081
+
+springdoc:
+  api-docs:
+    path: /docs
+  swagger-ui:
+    path: /swagger-ui.html
